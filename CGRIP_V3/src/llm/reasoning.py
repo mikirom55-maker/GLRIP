@@ -13,12 +13,11 @@ except ImportError:
 from src.data.dataset import CANDIDATE_LOCATIONS
 
 
-SYSTEM_PROMPT = """You are an emergency incident prediction expert specializing in Australian bushfire analysis (2019-2020 Black Summer).
+SYSTEM_PROMPT = """You are an emergency incident prediction expert specializing in natural disaster incident analysis.
 
-Your task is to predict fire evolution for the next 1-hour window based on multi-source data (satellite + social media).
+Your task is to predict disaster evolution for the next 1-hour window based on multi-source data (satellite + social media).
 
 IMPORTANT CONSTRAINTS:
-- For affected_areas, you MUST choose ONLY from this list: {locations}
 - risk_score must be between 0 and 1
 - predicted_direction is in degrees (0=North, 90=East, 180=South, 270=West)
 
@@ -27,7 +26,7 @@ Always respond in this exact JSON format:
     "risk_score": <float 0-1>,
     "risk_level": "<low|medium|high>",
     "predicted_direction": <degrees 0-360>,
-    "affected_areas": ["<from approved list>"],
+    "affected_areas": ["<>"],
     "explanation": "<reasoning>"
 }}""".format(locations=", ".join(CANDIDATE_LOCATIONS))
 
@@ -46,7 +45,7 @@ def build_prompt(graph_stats: dict, top_edges: list, social_texts: list,
                  dynamics: dict, timestamp: str) -> str:
     lines = [
         f"Timestamp: {timestamp}",
-        f"Region: NSW South Coast / East Gippsland, Australia",
+        f"Region: ",
         "",
         "=== Graph Topology ===",
         f"Physical sensor nodes: {graph_stats.get('num_physical_nodes', 0)}",
@@ -73,7 +72,6 @@ def build_prompt(graph_stats: dict, top_edges: list, social_texts: list,
     lines.append(f"  Growth rate: {dynamics.get('growth_rate', 0)*100:+.1f}%")
     lines.append(f"  Fire points (current window): {dynamics.get('fire_count_curr', 0)}")
     lines.append("")
-    lines.append(f"Candidate locations for affected_areas: {', '.join(CANDIDATE_LOCATIONS)}")
     lines.append("")
     lines.append("Predict the fire evolution for the next 1-hour window. Return JSON only.")
     return "\n".join(lines)
@@ -84,7 +82,7 @@ def call_gpt4o(prompt: str, max_tokens: int = 512, temperature: float = 0.3) -> 
         raise ImportError("openai not installed")
     client = openai.OpenAI()
     response = client.chat.completions.create(
-        model="gpt-4.1-mini",
+        model="gpt-5",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
